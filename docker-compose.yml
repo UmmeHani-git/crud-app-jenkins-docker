@@ -8,10 +8,10 @@ services:
       context: .
       dockerfile: backend.Dockerfile
     environment:
-      DB_USER: youruser
-      DB_PASS: yourpassword
-      DB_HOST: your-rds-endpoint
-      DB_NAME: yourdatabase
+      DB_USER: admin
+      DB_PASS: Cloud123
+      DB_HOST: database-1.cmtg0gcusv3u.us-east-1.rds.amazonaws.com
+      DB_NAME: cruddb
     ports:
       - "5000:5000"
 
