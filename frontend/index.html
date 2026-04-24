@@ -181,9 +181,8 @@ button {
 let page=1;
 let totalPages=1;
 let searchQuery='';
-let editId=null;
 let sortOrder='asc';
-let highlightId=null; // ✅ track edited row
+let highlightId=null;
 
 // THEME
 window.onload=()=>{
@@ -234,51 +233,69 @@ function render(data){
   div.className="item";
   div.dataset.id = i.id;
 
-  // apply highlight
   if(i.id == highlightId){
     div.classList.add("highlight");
     setTimeout(()=>highlightId=null,2000);
   }
 
   div.innerHTML=`
-    <span>${escapeHtml(i.name)}</span>
+    <span class="text">${escapeHtml(i.name)}</span>
     <div class="controls">
-      <i class="fa fa-pen edit-btn" data-id="${i.id}" data-name="${escapeHtml(i.name)}"></i>
-      <i class="fa fa-trash delete-btn" data-id="${i.id}"></i>
+      <i class="fa fa-pen" onclick="enableEdit(${i.id}, '${escapeHtml(i.name)}')"></i>
+      <i class="fa fa-trash" onclick="confirmUI(${i.id})"></i>
     </div>
   `;
 
   list.appendChild(div);
  });
-
- // attach events
- document.querySelectorAll('.edit-btn').forEach(btn=>{
-   btn.onclick = function(){
-     editItem(this.dataset.id, this.dataset.name);
-   }
- });
-
- document.querySelectorAll('.delete-btn').forEach(btn=>{
-   btn.onclick = function(){
-     confirmUI(this.dataset.id);
-   }
- });
-
- // auto scroll to highlight
- if(highlightId){
-   let el = document.querySelector(`[data-id='${highlightId}']`);
-   if(el) el.scrollIntoView({behavior:"smooth",block:"center"});
- }
 }
 
-// EDIT
-function editItem(id,name){
- document.getElementById("name").value=name;
- editId=id;
- showSuccess("Editing...");
+// 🔥 ENABLE INLINE EDIT
+function enableEdit(id,name){
+ let row=document.querySelector(`[data-id='${id}']`);
+
+ row.innerHTML=`
+   <input id="editInput${id}" value="${name}" style="flex:1;">
+   <div class="controls">
+     <i class="fa fa-check" onclick="saveInline(${id})"></i>
+     <i class="fa fa-times" onclick="load()"></i>
+   </div>
+ `;
 }
 
-// CONFIRM DELETE
+// 🔥 SAVE INLINE (AJAX)
+async function saveInline(id){
+ let input=document.getElementById(`editInput${id}`);
+ let name=input.value.trim();
+
+ if(!name) return showError("Enter value");
+
+ let res=await fetch(`/api/items/${id}`,{
+   method:'PUT',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({name})
+ });
+
+ let d=await res.json();
+ if(!res.ok) return showError(d.error);
+
+ highlightId=id;
+ showSuccess("Updated");
+
+ // update only this row (no full reload)
+ let row=document.querySelector(`[data-id='${id}']`);
+ row.classList.add("highlight");
+
+ row.innerHTML=`
+   <span class="text">${escapeHtml(name)}</span>
+   <div class="controls">
+     <i class="fa fa-pen" onclick="enableEdit(${id}, '${escapeHtml(name)}')"></i>
+     <i class="fa fa-trash" onclick="confirmUI(${id})"></i>
+   </div>
+ `;
+}
+
+// DELETE CONFIRM
 function confirmUI(id){
  let ctrl=document.querySelector(`[data-id="${id}"] .controls`);
 
@@ -298,39 +315,23 @@ async function deleteItem(id){
  load();
 }
 
-// SAVE
+// ADD NEW
 async function saveItem(){
  hideError();
  let name=document.getElementById("name").value;
 
  if(!name) return showError("Enter value");
 
- if(!editId){
-  let res=await fetch('/api/items',{
+ let res=await fetch('/api/items',{
    method:'POST',
    headers:{'Content-Type':'application/json'},
    body:JSON.stringify({name})
-  });
+ });
 
-  let d=await res.json();
-  if(!res.ok) return showError(d.error);
+ let d=await res.json();
+ if(!res.ok) return showError(d.error);
 
-  showSuccess("Added");
- } else {
-  let res=await fetch(`/api/items/${editId}`,{
-   method:'PUT',
-   headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({name})
-  });
-
-  let d=await res.json();
-  if(!res.ok) return showError(d.error);
-
-  highlightId = editId; // ✅ mark for highlight
-  showSuccess("Updated");
-  editId=null;
- }
-
+ showSuccess("Added");
  document.getElementById("name").value='';
  load();
 }
@@ -373,6 +374,5 @@ function escapeHtml(t){
  return t.replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 </script>
-
 </body>
 </html>
