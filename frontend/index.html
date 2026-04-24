@@ -3,160 +3,98 @@
 <head>
   <title>CRUD Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta charset="UTF-8"/>
-
   <style>
-    body {
-      font-family: system-ui;
-      background:#0f172a;
-      color:white;
-      margin:0;
-    }
-
-    .container {
-      max-width:700px;
-      margin:auto;
-      padding:20px;
-    }
-
-    h1 {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-
-    input {
-      padding:12px;
-      width:70%;
-      border-radius:8px;
-      border:none;
-      outline:none;
-    }
-
-    button {
-      padding:10px 12px;
-      border:none;
-      border-radius:8px;
-      cursor:pointer;
-    }
-
-    .add {
-      background:#3b82f6;
-      color:white;
-    }
-
-    .item {
-      background:#1e293b;
-      padding:12px;
-      margin-top:10px;
-      display:flex;
-      justify-content:space-between;
-      border-radius:10px;
-      align-items:center;
-    }
-
-    .delete {
-      background:#ef4444;
-      color:white;
-    }
-
-    .edit {
-      background:orange;
-      color:white;
-      margin-right:5px;
-    }
-
-    .empty {
-      text-align:center;
-      opacity:0.6;
-      margin-top:20px;
-    }
-
-    .top {
-      display:flex;
-      gap:10px;
-    }
+    body { font-family: system-ui; background:#0f172a; color:white; }
+    .container { max-width:600px; margin:auto; padding:20px; }
+    input, button { padding:10px; margin:5px; border-radius:8px; }
+    button { background:#3b82f6; color:white; cursor:pointer; }
+    .item { background:#1e293b; padding:10px; margin:5px; display:flex; justify-content:space-between; }
+    .stats { margin:10px 0; font-weight:bold; }
   </style>
 </head>
 
 <body>
 <div class="container">
 
-  <h1>CRUD Dashboard</h1>
+  <h1>🚀 CRUD Dashboard</h1>
 
-  <div class="top">
-    <input id="name" placeholder="Enter item"/>
-    <button class="add" onclick="add()">Add</button>
-  </div>
+  <!-- STATS -->
+  <div class="stats" id="stats">Total Items: 0</div>
 
+  <!-- INPUT -->
+  <input id="name" placeholder="Enter item"/>
+  <button onclick="add()">Add</button>
+
+  <!-- LIST -->
   <div id="list"></div>
-  <div id="empty" class="empty">No items found 🚀</div>
 
 </div>
 
 <script>
+let editingId = null;
+
+// LOAD ITEMS + STATS
 async function load() {
   let res = await fetch('/api/items');
   let data = await res.json();
 
+  let statsRes = await fetch('/api/stats');
+  let stats = await statsRes.json();
+
+  document.getElementById('stats').innerText = "Total Items: " + stats.total;
+
   let list = document.getElementById('list');
-  let empty = document.getElementById('empty');
-
   list.innerHTML = '';
-
-  if(data.length === 0) {
-    empty.style.display = "block";
-  } else {
-    empty.style.display = "none";
-  }
 
   data.forEach(i => {
     list.innerHTML += `
       <div class="item">
-        <span>${i.name}</span>
+        ${i.name}
         <div>
-          <button class="edit" onclick="edit(${i.id}, '${i.name}')">✏️</button>
-          <button class="delete" onclick="del(${i.id})">❌</button>
+          <button onclick="edit(${i.id}, '${i.name}')">✏️</button>
+          <button onclick="del(${i.id})">❌</button>
         </div>
-      </div>
-    `;
+      </div>`;
   });
 }
 
+// ADD or UPDATE
 async function add() {
   let name = document.getElementById('name').value;
-  if(!name) return;
 
-  await fetch('/api/items', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name})
-  });
+  if (editingId) {
+    await fetch(/api/items/${editingId}, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name})
+    });
+    editingId = null;
+  } else {
+    await fetch('/api/items', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name})
+    });
+  }
 
-  document.getElementById('name').value = "";
+  document.getElementById('name').value = '';
   load();
 }
 
+// EDIT MODE
+function edit(id, name) {
+  document.getElementById('name').value = name;
+  editingId = id;
+}
+
+// DELETE
 async function del(id) {
-  await fetch(`/api/items/${id}`, {method:'DELETE'});
+  await fetch(/api/items/${id}, {method:'DELETE'});
   load();
 }
 
-async function edit(id, oldName) {
-  let newName = prompt("Edit item:", oldName);
-  if(!newName) return;
-
-  await fetch(`/api/items/${id}`, {
-    method:'PUT',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name:newName})
-  });
-
-  load();
-}
-
+// INITIAL LOAD
 load();
 </script>
-
 </body>
 </html>
