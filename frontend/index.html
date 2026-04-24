@@ -3,11 +3,12 @@
 <head>
   <title>CRUD Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <style>
     body { font-family: system-ui; background:#0f172a; color:white; }
     .container { max-width:600px; margin:auto; padding:20px; }
     input, button { padding:10px; margin:5px; border-radius:8px; }
-    button { background:#3b82f6; color:white; cursor:pointer; }
+    button { background:#3b82f6; color:white; cursor:pointer; border:none; }
     .item { background:#1e293b; padding:10px; margin:5px; display:flex; justify-content:space-between; }
     .stats { margin:10px 0; font-weight:bold; }
   </style>
@@ -18,14 +19,11 @@
 
   <h1>🚀 CRUD Dashboard</h1>
 
-  <!-- STATS -->
   <div class="stats" id="stats">Total Items: 0</div>
 
-  <!-- INPUT -->
   <input id="name" placeholder="Enter item"/>
   <button onclick="add()">Add</button>
 
-  <!-- LIST -->
   <div id="list"></div>
 
 </div>
@@ -33,7 +31,7 @@
 <script>
 let editingId = null;
 
-// LOAD ITEMS + STATS
+// LOAD DATA
 async function load() {
   let res = await fetch('/api/items');
   let data = await res.json();
@@ -58,12 +56,17 @@ async function load() {
   });
 }
 
-// ADD or UPDATE
+// ADD / UPDATE
 async function add() {
   let name = document.getElementById('name').value;
 
+  if (!name) {
+    alert("Enter a name");
+    return;
+  }
+
   if (editingId) {
-    await fetch(/api/items/${editingId}, {
+    await fetch(`/api/items/${editingId}`, {
       method:'PUT',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({name})
@@ -81,7 +84,7 @@ async function add() {
   load();
 }
 
-// EDIT MODE
+// EDIT
 function edit(id, name) {
   document.getElementById('name').value = name;
   editingId = id;
@@ -89,12 +92,13 @@ function edit(id, name) {
 
 // DELETE
 async function del(id) {
-  await fetch(/api/items/${id}, {method:'DELETE'});
+  await fetch(`/api/items/${id}`, { method:'DELETE' });
   load();
 }
 
-// INITIAL LOAD
+// INIT
 load();
 </script>
+
 </body>
 </html>
